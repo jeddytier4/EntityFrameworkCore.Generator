@@ -4,6 +4,7 @@ using EntityFrameworkCore.Generator.Extensions;
 using EntityFrameworkCore.Generator.Metadata.Generation;
 using EntityFrameworkCore.Generator.Options;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace EntityFrameworkCore.Generator.Templates
@@ -20,22 +21,32 @@ namespace EntityFrameworkCore.Generator.Templates
 
         public override string WriteCode()
         {
-            CodeBuilder.Clear();
-
-            CodeBuilder.AppendLine("using System;");
-            CodeBuilder.AppendLine("using System.Collections.Generic;");
-            CodeBuilder.AppendLine("using Microsoft.EntityFrameworkCore;");
-            CodeBuilder.AppendLine();
-
-            CodeBuilder.AppendLine($"namespace {_entity.MappingNamespace}");
-            CodeBuilder.AppendLine("{");
-
-            using (CodeBuilder.Indent())
+            if (Options.Data.Entity.SingleFileWithMapping)
             {
-                GenerateClass();
+                using (CodeBuilder.Indent())
+                {
+                    GenerateClass();
+                }
             }
+            else
+            {
+                CodeBuilder.Clear();
 
-            CodeBuilder.AppendLine("}");
+                CodeBuilder.AppendLine("using System;");
+                CodeBuilder.AppendLine("using System.Collections.Generic;");
+                CodeBuilder.AppendLine("using Microsoft.EntityFrameworkCore;");
+                CodeBuilder.AppendLine();
+
+                CodeBuilder.AppendLine($"namespace {_entity.MappingNamespace}");
+                CodeBuilder.AppendLine("{");
+
+                using (CodeBuilder.Indent())
+                {
+                    GenerateClass();
+                }
+
+                CodeBuilder.AppendLine("}");
+            }
 
             return CodeBuilder.ToString();
         }
@@ -54,17 +65,18 @@ namespace EntityFrameworkCore.Generator.Templates
                 CodeBuilder.AppendLine("/// </summary>");
             }
 
-            CodeBuilder.AppendLine($"public partial class {mappingClass}");
+            CodeBuilder.AppendLine($"internal class {mappingClass}");
 
             using (CodeBuilder.Indent())
-                CodeBuilder.AppendLine($": IEntityTypeConfiguration<{safeName}>");
+                CodeBuilder.AppendLine($": IEntityTypeConfiguration<{entityClass}>");
 
             CodeBuilder.AppendLine("{");
 
             using (CodeBuilder.Indent())
             {
                 GenerateConfigure();
-                GenerateConstants();
+                if (Options.Data.Mapping.IncludeConstants)
+                { GenerateConstants(); }
             }
 
             CodeBuilder.AppendLine("}");
@@ -76,7 +88,7 @@ namespace EntityFrameworkCore.Generator.Templates
             var entityClass = _entity.EntityClass.ToSafeName();
             var safeName = $"{_entity.EntityNamespace}.{entityClass}";
 
-            CodeBuilder.AppendLine("#region Generated Constants");
+            //CodeBuilder.AppendLine("#region Generated Constants");
 
             CodeBuilder.AppendLine("public struct Table");
             CodeBuilder.AppendLine("{");
@@ -94,7 +106,7 @@ namespace EntityFrameworkCore.Generator.Templates
 
                 CodeBuilder.AppendLine($"public const string Name = \"{_entity.TableName}\";");
             }
-            
+
             CodeBuilder.AppendLine("}");
 
             CodeBuilder.AppendLine();
@@ -113,7 +125,7 @@ namespace EntityFrameworkCore.Generator.Templates
             }
 
             CodeBuilder.AppendLine("}");
-            CodeBuilder.AppendLine("#endregion");
+            //CodeBuilder.AppendLine("#endregion");
         }
 
         private void GenerateConfigure()
@@ -129,19 +141,20 @@ namespace EntityFrameworkCore.Generator.Templates
                 CodeBuilder.AppendLine("/// <param name=\"builder\">The builder to be used to configure the entity type.</param>");
             }
 
-            CodeBuilder.AppendLine($"public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<{entityFullName}> builder)");
+            CodeBuilder.AppendLine($"public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<{entityClass}> builder)");
             CodeBuilder.AppendLine("{");
 
             using (CodeBuilder.Indent())
             {
-                CodeBuilder.AppendLine("#region Generated Configure");
+                //CodeBuilder.AppendLine("#region Generated Configure");
 
                 GenerateTableMapping();
                 GenerateKeyMapping();
+                GenerateIndexMapping();
                 GeneratePropertyMapping();
                 GenerateRelationshipMapping();
 
-                CodeBuilder.AppendLine("#endregion");
+                //CodeBuilder.AppendLine("#endregion");
             }
 
             CodeBuilder.AppendLine("}");
@@ -231,7 +244,6 @@ namespace EntityFrameworkCore.Generator.Templates
             foreach (var property in _entity.Properties)
             {
                 GeneratePropertyMapping(property);
-                CodeBuilder.AppendLine();
             }
         }
 
@@ -239,61 +251,80 @@ namespace EntityFrameworkCore.Generator.Templates
         {
             bool isString = property.SystemType == typeof(string);
             bool isByteArray = property.SystemType == typeof(byte[]);
+            bool isMoreThanOneLine = false;
+            var tempBuilder = new IndentedStringBuilder();
+            tempBuilder.Append($"builder.Property(t => t.{property.ColumnName})");
 
-            CodeBuilder.Append($"builder.Property(t => t.{property.PropertyName})");
-
-            CodeBuilder.IncrementIndent();
-            if (property.IsRequired)
-            {
-                CodeBuilder.AppendLine();
-                CodeBuilder.Append(".IsRequired()");
-            }
+            tempBuilder.IncrementIndent();
+            //if (property.IsRequired)
+            //{
+            //    CodeBuilder.AppendLine();
+            //    CodeBuilder.Append(".IsRequired()");
+            //}
 
             if (property.IsRowVersion == true)
             {
-                CodeBuilder.AppendLine();
-                CodeBuilder.Append(".IsRowVersion()");
+                tempBuilder.AppendLine();
+                tempBuilder.Append(".IsRowVersion()");
+                isMoreThanOneLine = true;
             }
 
-            CodeBuilder.AppendLine();
-            CodeBuilder.Append($".HasColumnName({property.ColumnName.ToLiteral()})");
+            //CodeBuilder.AppendLine();
+            //CodeBuilder.Append($".HasColumnName({property.ColumnName.ToLiteral()})");
 
-            if (!string.IsNullOrEmpty(property.StoreType))
+            if (!string.IsNullOrEmpty(property.StoreType) && (property.StoreType.ToLiteral().StartsWith("\"decimal") || property.StoreType.ToLiteral().StartsWith("\"date")))
             {
-                CodeBuilder.AppendLine();
-                CodeBuilder.Append($".HasColumnType({property.StoreType.ToLiteral()})");
+                tempBuilder.AppendLine();
+                tempBuilder.Append($".HasColumnType({property.StoreType.ToLiteral()})");
+                isMoreThanOneLine = true;
+            }
+            if (isString && property.StoreType.ToLiteral().StartsWith("\"varchar"))
+            {
+                tempBuilder.AppendLine();
+                tempBuilder.Append(".IsUnicode(false)");
+                isMoreThanOneLine = true;
             }
 
             if ((isString || isByteArray) && property.Size > 0)
             {
-                CodeBuilder.AppendLine();
-                CodeBuilder.Append($".HasMaxLength({property.Size.Value.ToString(CultureInfo.InvariantCulture)})");
+                tempBuilder.AppendLine();
+                tempBuilder.Append($".HasMaxLength({property.Size.Value.ToString(CultureInfo.InvariantCulture)})");
+                isMoreThanOneLine = true;
             }
 
             if (!string.IsNullOrEmpty(property.Default))
             {
-                CodeBuilder.AppendLine();
-                CodeBuilder.Append($".HasDefaultValueSql({property.Default.ToLiteral()})");
+                tempBuilder.AppendLine();
+                tempBuilder.Append($".HasDefaultValueSql({property.Default.ToLiteral().Replace("(", "").Replace(")", "")})");
+                isMoreThanOneLine = true;
             }
 
             switch (property.ValueGenerated)
             {
                 case ValueGenerated.OnAdd:
-                    CodeBuilder.AppendLine();
-                    CodeBuilder.Append(".ValueGeneratedOnAdd()");
+                    tempBuilder.AppendLine();
+                    tempBuilder.Append(".ValueGeneratedOnAdd()");
+                    isMoreThanOneLine = true;
                     break;
                 case ValueGenerated.OnAddOrUpdate:
-                    CodeBuilder.AppendLine();
-                    CodeBuilder.Append(".ValueGeneratedOnAddOrUpdate()");
+                    tempBuilder.AppendLine();
+                    tempBuilder.Append(".ValueGeneratedOnAddOrUpdate()");
+                    isMoreThanOneLine = true;
                     break;
                 case ValueGenerated.OnUpdate:
-                    CodeBuilder.AppendLine();
-                    CodeBuilder.Append(".ValueGeneratedOnUpdate()");
+                    tempBuilder.AppendLine();
+                    tempBuilder.Append(".ValueGeneratedOnUpdate()");
+                    isMoreThanOneLine = true;
                     break;
             }
-            CodeBuilder.DecrementIndent();
+            tempBuilder.DecrementIndent();
 
-            CodeBuilder.AppendLine(";");
+            tempBuilder.AppendLine(";");
+            if (isMoreThanOneLine)
+            {
+                CodeBuilder.AppendLines(tempBuilder.ToString());
+                CodeBuilder.AppendLine();
+            }
         }
 
 
@@ -351,6 +382,36 @@ namespace EntityFrameworkCore.Generator.Templates
                 : $"builder.{method}(\"{_entity.TableName}\");");
 
             CodeBuilder.AppendLine();
+        }
+        private void GenerateIndexMapping()
+        {
+            CodeBuilder.AppendLine("// indexes");
+            foreach (var index in _entity.Indexes)
+            {
+                var indexName = index.Name.ToSafeName();
+                
+                CodeBuilder.AppendLine(index.Columns.Count > 1
+                    ? $"builder.HasIndex(e => new {{e.{string.Join(", e.", index.Columns.ToArray())}}})"
+                    : $"builder.HasIndex(e => e.{index.Columns[0]})");
+
+                CodeBuilder.IncrementIndent();
+                CodeBuilder.Append($".HasName(\"{indexName}\")");
+                if (!string.IsNullOrEmpty(index.Filter))
+                {
+                    CodeBuilder.AppendLine();
+                    CodeBuilder.Append($".HasFilter(\"{index.Filter}\")");
+                }
+                if (index.IsUnique)
+                {
+                    CodeBuilder.AppendLine();
+                    CodeBuilder.Append(".IsUnique()");
+                }
+
+                CodeBuilder.DecrementIndent();
+                CodeBuilder.AppendLine(";");
+                CodeBuilder.AppendLine();
+            }
+
         }
     }
 }

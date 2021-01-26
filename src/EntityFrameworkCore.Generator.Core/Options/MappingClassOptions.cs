@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 
 namespace EntityFrameworkCore.Generator.Options
 {
@@ -16,6 +17,15 @@ namespace EntityFrameworkCore.Generator.Options
         {
             Namespace = "{Project.Namespace}.Data.Mapping";
             Directory = @"{Project.Directory}\Data\Mapping";
+            IncludeConstants = true;
         }
+
+        /// <summary>
+        /// If true generate constants for table name and columns 
+        /// </summary>
+        [DefaultValue(true)]
+        public bool IncludeConstants { get; set; }
+        [DefaultValue("Map")]
+        public string Suffix { get; set; }
     }
 }

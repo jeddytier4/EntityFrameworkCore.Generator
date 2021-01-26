@@ -57,7 +57,8 @@ namespace EntityFrameworkCore.Generator
         {
             GenerateDataContext(entityContext);
             GenerateEntityClasses(entityContext);
-            GenerateMappingClasses(entityContext);
+            if (!Options.Data.Entity.SingleFileWithMapping)
+             GenerateMappingClasses(entityContext);
 
             if (Options.Data.Query.Generate)
                 GenerateQueryExtensions(entityContext);

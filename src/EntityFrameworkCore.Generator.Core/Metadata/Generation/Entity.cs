@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace EntityFrameworkCore.Generator.Metadata.Generation
@@ -162,6 +163,8 @@ namespace EntityFrameworkCore.Generator.Metadata.Generation
         ///   <c>true</c> if this instance is view; otherwise, <c>false</c>.
         /// </value>
         public bool IsView { get; set; }
+
+        public List<Index> Indexes {get;set;}
 
         void IOptionVariable.Set(VariableDictionary variableDictionary)
         {

@@ -21,6 +21,7 @@ namespace EntityFrameworkCore.Generator.Options
             RelationshipNaming = RelationshipNaming.Plural;
             EntityNaming = EntityNaming.Singular;
             PrefixWithSchemaName = false;
+            SingleFileWithMapping = false;
         }
 
         /// <summary>
@@ -70,5 +71,14 @@ namespace EntityFrameworkCore.Generator.Options
         /// </summary>
         [DefaultValue(false)]
         public bool PrefixWithSchemaName { get; set; }
+
+        /// <summary>
+        /// If true generate mappings in same file as the entity
+        /// </summary>
+        [DefaultValue(false)]
+        public bool SingleFileWithMapping { get; set; }
+
+        [DefaultValue("Entity")]
+        public string Suffix { get; set; }
     }
 }

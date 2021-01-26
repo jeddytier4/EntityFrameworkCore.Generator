@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore.Scaffolding.Metadata;
 using Microsoft.EntityFrameworkCore.Scaffolding.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using Index = EntityFrameworkCore.Generator.Metadata.Generation.Index;
 using PropertyCollection = EntityFrameworkCore.Generator.Metadata.Generation.PropertyCollection;
 
 namespace EntityFrameworkCore.Generator
@@ -72,8 +73,10 @@ namespace EntityFrameworkCore.Generator
 
                 _logger.LogDebug("  Processing Table : {schema}.{name}", table.Schema, table.Name);
 
+                
                 _options.Variables.Set(VariableConstants.TableSchema, ToLegalName(table.Schema));
                 _options.Variables.Set(VariableConstants.TableName, ToLegalName(table.Name));
+                
 
                 var entity = GetEntity(entityContext, table);
                 GetModels(entity);
@@ -110,20 +113,38 @@ namespace EntityFrameworkCore.Generator
             {
                 Context = entityContext,
                 TableName = tableSchema.Name,
-                TableSchema = tableSchema.Schema
+                TableSchema = tableSchema.Schema,
+                Indexes = new List<Index>()
             };
-
-            string entityClass = _options.Data.Entity.Name;
+            //_options.Variables.Set(VariableConstants.EntityName, ToClassName(tableSchema.Name,"") + "Entity");
+            string entityClass = ToClassName(_options.Data.Entity.Name,"") + _options.Data.Entity.Suffix;
             if (entityClass.IsNullOrEmpty())
                 entityClass = ToClassName(tableSchema.Name, tableSchema.Schema);
-
+            
+            foreach (var index in tableSchema.Indexes)
+            {
+                
+                var tmpIndex = new Metadata.Generation.Index
+                {
+                    Filter = index.Filter,
+                    IsUnique = index.IsUnique,
+                    Name = index.Name,
+                    IsProcessed = true,
+                    Columns = new List<string>()
+                };
+                foreach (var column in index.Columns)
+                {
+                    tmpIndex.Columns.Add(column.Name);
+                }
+                entity.Indexes.Add(tmpIndex);
+            }
             entityClass = _namer.UniqueClassName(entityClass);
 
             string entityNamespace = _options.Data.Entity.Namespace;
             string entiyBaseClass = _options.Data.Entity.BaseClass;
 
 
-            string mappingName = entityClass + "Map";
+            string mappingName = entityClass + _options.Data.Mapping.Suffix;
             mappingName = _namer.UniqueClassName(mappingName);
 
             string mappingNamespace = _options.Data.Mapping.Namespace;
@@ -227,7 +248,13 @@ namespace EntityFrameworkCore.Generator
 
         private void CreateRelationship(EntityContext entityContext, Entity foreignEntity, DatabaseForeignKey tableKeySchema)
         {
+            _options.Variables.Set(VariableConstants.TableSchema, ToLegalName(tableKeySchema.PrincipalTable.Schema));
+            _options.Variables.Set(VariableConstants.TableName, ToLegalName(tableKeySchema.PrincipalTable.Name));
+            
             Entity primaryEntity = GetEntity(entityContext, tableKeySchema.PrincipalTable, false, false);
+            
+            _options.Variables.Set(VariableConstants.TableSchema, ToLegalName(tableKeySchema.Table.Schema));
+            _options.Variables.Set(VariableConstants.TableName, ToLegalName(tableKeySchema.Table.Name));
 
             string primaryName = primaryEntity.EntityClass;
             string foreignName = foreignEntity.EntityClass;
