@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace EntityFrameworkCore.Generator.Metadata.Parsing
@@ -19,7 +18,7 @@ namespace EntityFrameworkCore.Generator.Metadata.Parsing
         public string TableName { get; set; }
         public string TableSchema { get; set; }
 
-        public List<ParsedProperty> Properties { get; private set; }
-        public List<ParsedRelationship> Relationships { get; private set; }
+        public List<ParsedProperty> Properties { get; }
+        public List<ParsedRelationship> Relationships { get; }
     }
 }

@@ -11,7 +11,7 @@ namespace EntityFrameworkCore.Generator.Templates
 {
     public class MappingClassTemplate : CodeTemplateBase
     {
-        private Entity _entity;
+        private readonly Entity _entity;
 
         public MappingClassTemplate(Entity entity, GeneratorOptions options) : base(options)
         {
@@ -164,7 +164,11 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GenerateRelationshipMapping()
         {
-            CodeBuilder.AppendLine("// relationships");
+            if (_entity.Relationships.Count > 0)
+            {
+                CodeBuilder.AppendLine("// relationships");
+            }
+            
             foreach (var relationship in _entity.Relationships.Where(e => e.IsMapped))
             {
                 GenerateRelationshipMapping(relationship);
@@ -202,7 +206,7 @@ namespace EntityFrameworkCore.Generator.Templates
             CodeBuilder.Append("(d => ");
 
             var keys = relationship.Properties;
-            bool wroteLine = false;
+            var wroteLine = false;
 
             if (keys.Count == 1)
             {
@@ -240,7 +244,10 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GeneratePropertyMapping()
         {
-            CodeBuilder.AppendLine("// properties");
+            if (_entity.Properties.Count > 0)
+            {
+                CodeBuilder.AppendLine("// properties");
+            }
             foreach (var property in _entity.Properties)
             {
                 GeneratePropertyMapping(property);
@@ -249,9 +256,9 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GeneratePropertyMapping(Property property)
         {
-            bool isString = property.SystemType == typeof(string);
-            bool isByteArray = property.SystemType == typeof(byte[]);
-            bool isMoreThanOneLine = false;
+            var isString = property.SystemType == typeof(string);
+            var isByteArray = property.SystemType == typeof(byte[]);
+            var isMoreThanOneLine = false;
             var tempBuilder = new IndentedStringBuilder();
             tempBuilder.Append($"builder.Property(t => t.{property.ColumnName})");
 
@@ -330,17 +337,21 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GenerateKeyMapping()
         {
-            CodeBuilder.AppendLine("// key");
+
 
             var keys = _entity.Properties.Where(p => p.IsPrimaryKey == true).ToList();
+
             if (keys.Count == 0)
             {
+                CodeBuilder.AppendLine("// key");
+                
                 CodeBuilder.AppendLine("builder.HasNoKey();");
                 CodeBuilder.AppendLine();
 
                 return;
             }
 
+            CodeBuilder.AppendLine(keys.Count == 1 ? "// key" : "// keys");
             CodeBuilder.Append("builder.HasKey(t => ");
 
             if (keys.Count == 1)
@@ -352,7 +363,7 @@ namespace EntityFrameworkCore.Generator.Templates
                 return;
             }
 
-            bool wroteLine = false;
+            var wroteLine = false;
 
             CodeBuilder.Append("new { ");
             foreach (var p in keys)
@@ -385,7 +396,10 @@ namespace EntityFrameworkCore.Generator.Templates
         }
         private void GenerateIndexMapping()
         {
-            CodeBuilder.AppendLine("// indexes");
+            if (_entity.Indexes.Count > 0)
+            {
+                CodeBuilder.AppendLine("// indexes");
+            }
             foreach (var index in _entity.Indexes)
             {
                 var indexName = index.Name.ToSafeName();

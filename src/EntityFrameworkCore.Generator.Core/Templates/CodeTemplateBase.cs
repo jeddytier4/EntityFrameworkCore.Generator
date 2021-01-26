@@ -48,7 +48,7 @@ namespace EntityFrameworkCore.Generator.Templates
             var originalRegions = RegionParser.ParseRegions(originalContent);
             var originalBuilder = new StringBuilder(originalContent);
 
-            int offset = 0;
+            var offset = 0;
             foreach (var pair in outputRegions)
             {
                 var outputRegion = pair.Value;
@@ -58,14 +58,14 @@ namespace EntityFrameworkCore.Generator.Templates
                     continue;
                 }
 
-                int startIndex = originalRegion.StartIndex + offset;
-                int beforeReplace = originalBuilder.Length;
-                int length = (originalRegion.EndIndex + offset) - startIndex;
+                var startIndex = originalRegion.StartIndex + offset;
+                var beforeReplace = originalBuilder.Length;
+                var length = (originalRegion.EndIndex + offset) - startIndex;
 
                 originalBuilder.Remove(startIndex, length);
                 originalBuilder.Insert(startIndex, outputRegion.Content);
 
-                int afterReplace = originalBuilder.Length;
+                var afterReplace = originalBuilder.Length;
 
                 offset = offset + (afterReplace - beforeReplace);
             }

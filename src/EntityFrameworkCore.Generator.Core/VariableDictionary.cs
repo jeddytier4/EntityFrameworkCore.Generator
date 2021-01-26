@@ -115,91 +115,89 @@ namespace EntityFrameworkCore.Generator
             var variable = new StringBuilder();
             var state = State.OutsideExpression;
 
-            using (var reader = new StringReader(variableOrText))
+            using var reader = new StringReader(variableOrText);
+            do
             {
-                do
+                var c = -1;
+                switch (state)
                 {
-                    int c = -1;
-                    switch (state)
-                    {
-                        case State.OutsideExpression:
-                            c = reader.Read();
-                            switch (c)
-                            {
-                                case -1:
-                                    state = State.End;
-                                    break;
-                                case '{':
-                                    state = State.OnOpenBracket;
-                                    break;
-                                case '}':
-                                    state = State.OnCloseBracket;
-                                    break;
-                                default:
-                                    result.Append((char) c);
-                                    break;
-                            }
+                    case State.OutsideExpression:
+                        c = reader.Read();
+                        switch (c)
+                        {
+                            case -1:
+                                state = State.End;
+                                break;
+                            case '{':
+                                state = State.OnOpenBracket;
+                                break;
+                            case '}':
+                                state = State.OnCloseBracket;
+                                break;
+                            default:
+                                result.Append((char) c);
+                                break;
+                        }
 
-                            break;
-                        case State.OnOpenBracket:
-                            c = reader.Read();
-                            switch (c)
-                            {
-                                case -1:
-                                    throw new FormatException();
-                                case '{':
-                                    result.Append('{');
-                                    state = State.OutsideExpression;
-                                    break;
-                                default:
-                                    variable.Append((char) c);
-                                    state = State.InsideExpression;
-                                    break;
-                            }
+                        break;
+                    case State.OnOpenBracket:
+                        c = reader.Read();
+                        switch (c)
+                        {
+                            case -1:
+                                throw new FormatException();
+                            case '{':
+                                result.Append('{');
+                                state = State.OutsideExpression;
+                                break;
+                            default:
+                                variable.Append((char) c);
+                                state = State.InsideExpression;
+                                break;
+                        }
 
-                            break;
-                        case State.InsideExpression:
-                            c = reader.Read();
-                            switch (c)
-                            {
-                                case -1:
-                                    throw new FormatException();
-                                case '}':
+                        break;
+                    case State.InsideExpression:
+                        c = reader.Read();
+                        switch (c)
+                        {
+                            case -1:
+                                throw new FormatException();
+                            case '}':
 
-                                    var v = variable.ToString();
-                                    if (loop.Add(v) && _variables.TryGetValue(v, out string value))
-                                    {
-                                        value = Eval(value, loop);
-                                        result.Append(value);
-                                    }
+                                var v = variable.ToString();
+                                if (loop.Add(v) && _variables.TryGetValue(v, out var value))
+                                {
+                                    value = Eval(value, loop);
+                                    result.Append(value);
+                                }
 
-                                    variable.Length = 0;
-                                    state = State.OutsideExpression;
-                                    break;
-                                default:
-                                    variable.Append((char) c);
-                                    break;
-                            }
+                                variable.Length = 0;
+                                state = State.OutsideExpression;
+                                break;
+                            default:
+                                variable.Append((char) c);
+                                break;
+                        }
 
-                            break;
-                        case State.OnCloseBracket:
-                            c = reader.Read();
-                            switch (c)
-                            {
-                                case '}':
-                                    result.Append('}');
-                                    state = State.OutsideExpression;
-                                    break;
-                                default:
-                                    throw new FormatException();
-                            }
+                        break;
+                    case State.OnCloseBracket:
+                        c = reader.Read();
+                        switch (c)
+                        {
+                            case '}':
+                                result.Append('}');
+                                state = State.OutsideExpression;
+                                break;
+                            default:
+                                throw new FormatException();
+                        }
 
-                            break;
-                        default:
-                            throw new FormatException("Invalid parse state.");
-                    }
-                } while (state != State.End);
-            }
+                        break;
+                    default:
+                        throw new FormatException("Invalid parse state.");
+                }
+            } while (state != State.End);
 
             return result.ToString();
         }

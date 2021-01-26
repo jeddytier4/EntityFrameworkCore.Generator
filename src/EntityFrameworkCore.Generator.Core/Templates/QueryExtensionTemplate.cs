@@ -44,7 +44,7 @@ namespace EntityFrameworkCore.Generator.Templates
         private void GenerateClass()
         {
             var entityClass = _entity.EntityClass.ToSafeName();
-            string safeName = _entity.EntityNamespace + "." + entityClass;
+            var safeName = _entity.EntityNamespace + "." + entityClass;
 
             if (Options.Data.Query.Document)
             {
@@ -92,9 +92,9 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GenerateMethod(Method method)
         {
-            string safeName = _entity.EntityNamespace + "." + _entity.EntityClass.ToSafeName();
-            string prefix = Options.Data.Query.IndexPrefix;
-            string suffix = method.NameSuffix;
+            var safeName = _entity.EntityNamespace + "." + _entity.EntityClass.ToSafeName();
+            var prefix = Options.Data.Query.IndexPrefix;
+            var suffix = method.NameSuffix;
 
             if (Options.Data.Query.Document)
             {
@@ -113,7 +113,7 @@ namespace EntityFrameworkCore.Generator.Templates
 
             using (CodeBuilder.Indent())
             {
-                CodeBuilder.Append($"return queryable.Where(");
+                CodeBuilder.Append("return queryable.Where(");
                 AppendLamba(method);
                 CodeBuilder.AppendLine(");");
             }
@@ -124,12 +124,12 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GenerateUniqueMethod(Method method, bool async = false)
         {
-            string safeName = _entity.EntityNamespace + "." + _entity.EntityClass.ToSafeName();
-            string uniquePrefix = Options.Data.Query.UniquePrefix;
-            string suffix = method.NameSuffix;
+            var safeName = _entity.EntityNamespace + "." + _entity.EntityClass.ToSafeName();
+            var uniquePrefix = Options.Data.Query.UniquePrefix;
+            var suffix = method.NameSuffix;
 
-            string asyncSuffix = async ? "Async" : string.Empty;
-            string returnType = async ? $"Task<{safeName}>" : safeName;
+            var asyncSuffix = async ? "Async" : string.Empty;
+            var returnType = async ? $"Task<{safeName}>" : safeName;
 
             if (Options.Data.Query.Document)
             {
@@ -159,11 +159,11 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GenerateKeyMethod(Method method, bool async = false)
         {
-            string safeName = _entity.EntityNamespace + "." + _entity.EntityClass.ToSafeName();
-            string uniquePrefix = Options.Data.Query.UniquePrefix;
+            var safeName = _entity.EntityNamespace + "." + _entity.EntityClass.ToSafeName();
+            var uniquePrefix = Options.Data.Query.UniquePrefix;
 
-            string asyncSuffix = async ? "Async" : string.Empty;
-            string returnType = async ? $"ValueTask<{safeName}>" : safeName;
+            var asyncSuffix = async ? "Async" : string.Empty;
+            var returnType = async ? $"ValueTask<{safeName}>" : safeName;
 
             if (Options.Data.Query.Document)
             {
@@ -214,7 +214,7 @@ namespace EntityFrameworkCore.Generator.Templates
         {
             foreach (var property in method.Properties)
             {
-                string paramName = property.PropertyName
+                var paramName = property.PropertyName
                     .ToCamelCase()
                     .ToSafeName();
 
@@ -224,18 +224,18 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void AppendParameters(Method method)
         {
-            bool wrote = false;
+            var wrote = false;
 
             foreach (var property in method.Properties)
             {
                 if (wrote)
                     CodeBuilder.Append(", ");
 
-                string paramName = property.PropertyName
+                var paramName = property.PropertyName
                     .ToCamelCase()
                     .ToSafeName();
 
-                string paramType = property.SystemType
+                var paramType = property.SystemType
                     .ToNullableType(property.IsNullable == true);
 
                 CodeBuilder.Append($"{paramType} {paramName}");
@@ -246,13 +246,13 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void AppendNames(Method method)
         {
-            bool wrote = false;
+            var wrote = false;
             foreach (var property in method.Properties)
             {
                 if (wrote)
                     CodeBuilder.Append(", ");
 
-                string paramName = property.PropertyName
+                var paramName = property.PropertyName
                     .ToCamelCase()
                     .ToSafeName();
 
@@ -263,12 +263,12 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void AppendLamba(Method method)
         {
-            bool wrote = false;
-            bool indented = false;
+            var wrote = false;
+            var indented = false;
 
             foreach (var property in method.Properties)
             {
-                string paramName = property.PropertyName
+                var paramName = property.PropertyName
                     .ToCamelCase()
                     .ToSafeName();
 

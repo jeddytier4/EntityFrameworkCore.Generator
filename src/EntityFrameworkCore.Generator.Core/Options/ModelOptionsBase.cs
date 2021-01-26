@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace EntityFrameworkCore.Generator.Options
+﻿namespace EntityFrameworkCore.Generator.Options
 {
     /// <summary>
     /// Base class for the Model generation

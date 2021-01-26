@@ -1,8 +1,6 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using EntityFrameworkCore.Generator.Extensions;
 using EntityFrameworkCore.Generator.Options;
-using EntityFrameworkCore.Generator.Templates;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -18,7 +16,7 @@ namespace EntityFrameworkCore.Generator.Scripts
 
         protected ScriptTemplateBase(ILoggerFactory loggerFactory, GeneratorOptions generatorOptions, TemplateOptions templateOptions)
         {
-            Logger = loggerFactory.CreateLogger(this.GetType());
+            Logger = loggerFactory.CreateLogger(GetType());
 
             TemplateOptions = templateOptions;
             GeneratorOptions = generatorOptions;

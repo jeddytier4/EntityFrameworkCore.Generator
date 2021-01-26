@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using EntityFrameworkCore.Generator.Metadata.Generation;
 
 namespace EntityFrameworkCore.Generator.Extensions
@@ -71,8 +70,8 @@ namespace EntityFrameworkCore.Generator.Extensions
 
         public static string MakeUnique(this string name, Func<string, bool> exists)
         {
-            string uniqueName = name;
-            int count = 1;
+            var uniqueName = name;
+            var count = 1;
 
             while (exists(uniqueName))
                 uniqueName = string.Concat(name, count++);
@@ -107,11 +106,11 @@ namespace EntityFrameworkCore.Generator.Extensions
             if (type == "System.Xml.XmlDocument")
                 type = "System.String";
 
-            if (language == CodeLanguage.CSharp && _csharpTypeAlias.TryGetValue(type, out string t))
+            if (language == CodeLanguage.CSharp && _csharpTypeAlias.TryGetValue(type, out var t))
                 return t;
 
             // drop system from namespace
-            string[] parts = type.Split('.');
+            var parts = type.Split('.');
             if (parts.Length == 2 && parts[0] == "System")
                 return parts[1];
 
@@ -125,7 +124,7 @@ namespace EntityFrameworkCore.Generator.Extensions
 
         public static string ToNullableType(this string type, bool isNullable = false, CodeLanguage language = CodeLanguage.CSharp)
         {
-            bool isValueType = type.IsValueType();
+            var isValueType = type.IsValueType();
 
             type = type.ToType(language);
 

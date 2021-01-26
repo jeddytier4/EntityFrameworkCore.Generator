@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace EntityFrameworkCore.Generator.Options
+﻿namespace EntityFrameworkCore.Generator.Options
 {
     /// <summary>
     /// Create model file generation options

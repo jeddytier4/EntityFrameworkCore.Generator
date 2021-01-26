@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace EntityFrameworkCore.Generator.Metadata.Parsing
 {
-    [DebuggerDisplay("Context: {ContextClass}")]
+    [DebuggerDisplay("Context: {" + nameof(ContextClass) + "}")]
     public class ParsedContext
     {
         public ParsedContext()

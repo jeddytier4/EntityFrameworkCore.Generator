@@ -25,7 +25,7 @@ namespace EntityFrameworkCore.Generator
         public string UniqueName(string bucketName, string name)
         {
             var hashSet = _names.GetOrAdd(bucketName, k => new HashSet<string>(Comparer));
-            string result = MakeUnique(name, hashSet.Contains);
+            var result = MakeUnique(name, hashSet.Contains);
             hashSet.Add(result);
 
             return result;
@@ -39,7 +39,7 @@ namespace EntityFrameworkCore.Generator
 
         public string UniqueModelName(string @namespace, string className)
         {
-            string globalClassName = "global::ModelClass::" + @namespace;
+            var globalClassName = "global::ModelClass::" + @namespace;
             return UniqueName(globalClassName, className);
         }
 
@@ -58,8 +58,8 @@ namespace EntityFrameworkCore.Generator
 
         public string MakeUnique(string name, Func<string, bool> exists)
         {
-            string uniqueName = name;
-            int count = 1;
+            var uniqueName = name;
+            var count = 1;
 
             while (exists(uniqueName))
                 uniqueName = string.Concat(name, count++);

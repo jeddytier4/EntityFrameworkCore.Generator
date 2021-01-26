@@ -8,7 +8,6 @@ using EntityFrameworkCore.Generator.Extensions;
 using EntityFrameworkCore.Generator.Metadata.Generation;
 using EntityFrameworkCore.Generator.Options;
 using Humanizer;
-using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Scaffolding.Metadata;
 using Microsoft.EntityFrameworkCore.Scaffolding.Metadata.Internal;
@@ -42,20 +41,19 @@ namespace EntityFrameworkCore.Generator
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _typeMapper = typeMappingSource;
 
-            var entityContext = new EntityContext();
-            entityContext.DatabaseName = databaseModel.DatabaseName;
+            var entityContext = new EntityContext {DatabaseName = databaseModel.DatabaseName};
 
             // update database variables
             _options.Database.Name = ToLegalName(databaseModel.DatabaseName);
 
-            string projectNamespace = _options.Project.Namespace;
+            var projectNamespace = _options.Project.Namespace;
             _options.Project.Namespace = projectNamespace;
 
-            string contextClass = _options.Data.Context.Name;
+            var contextClass = _options.Data.Context.Name;
             contextClass = _namer.UniqueClassName(contextClass);
 
-            string contextNamespace = _options.Data.Context.Namespace;
-            string contextBaseClass = _options.Data.Context.BaseClass;
+            var contextNamespace = _options.Data.Context.Namespace;
+            var contextBaseClass = _options.Data.Context.BaseClass;
 
             entityContext.ContextClass = contextClass;
             entityContext.ContextNamespace = contextNamespace;
@@ -91,8 +89,8 @@ namespace EntityFrameworkCore.Generator
 
         private Entity GetEntity(EntityContext entityContext, DatabaseTable tableSchema, bool processRelationships = true, bool processMethods = true)
         {
-            Entity entity = entityContext.Entities.ByTable(tableSchema.Name, tableSchema.Schema)
-                ?? CreateEntity(entityContext, tableSchema);
+            var entity = entityContext.Entities.ByTable(tableSchema.Name, tableSchema.Schema)
+                         ?? CreateEntity(entityContext, tableSchema);
 
             if (!entity.Properties.IsProcessed)
                 CreateProperties(entity, tableSchema.Columns);
@@ -116,15 +114,15 @@ namespace EntityFrameworkCore.Generator
                 TableSchema = tableSchema.Schema,
                 Indexes = new List<Index>()
             };
-            //_options.Variables.Set(VariableConstants.EntityName, ToClassName(tableSchema.Name,"") + "Entity");
-            string entityClass = ToClassName(_options.Data.Entity.Name,"") + _options.Data.Entity.Suffix;
+            
+            var entityClass = ToClassName(_options.Data.Entity.Name,"") + _options.Data.Entity.Suffix;
             if (entityClass.IsNullOrEmpty())
                 entityClass = ToClassName(tableSchema.Name, tableSchema.Schema);
             
             foreach (var index in tableSchema.Indexes)
             {
                 
-                var tmpIndex = new Metadata.Generation.Index
+                var tmpIndex = new Index
                 {
                     Filter = index.Filter,
                     IsUnique = index.IsUnique,
@@ -140,16 +138,16 @@ namespace EntityFrameworkCore.Generator
             }
             entityClass = _namer.UniqueClassName(entityClass);
 
-            string entityNamespace = _options.Data.Entity.Namespace;
-            string entiyBaseClass = _options.Data.Entity.BaseClass;
+            var entityNamespace = _options.Data.Entity.Namespace;
+            var entiyBaseClass = _options.Data.Entity.BaseClass;
 
 
-            string mappingName = entityClass + _options.Data.Mapping.Suffix;
+            var mappingName = entityClass + _options.Data.Mapping.Suffix;
             mappingName = _namer.UniqueClassName(mappingName);
 
-            string mappingNamespace = _options.Data.Mapping.Namespace;
+            var mappingNamespace = _options.Data.Mapping.Namespace;
 
-            string contextName = ContextName(entityClass);
+            var contextName = ContextName(entityClass);
             contextName = ToPropertyName(entityContext.ContextClass, contextName);
             contextName = _namer.UniqueContextName(contextName);
 
@@ -195,7 +193,7 @@ namespace EntityFrameworkCore.Generator
                     entity.Properties.Add(property);
                 }
 
-                string propertyName = ToPropertyName(entity.EntityClass, column.Name);
+                var propertyName = ToPropertyName(entity.EntityClass, column.Name);
                 propertyName = _namer.UniqueName(entity.EntityClass, propertyName);
 
                 property.PropertyName = propertyName;
@@ -250,29 +248,29 @@ namespace EntityFrameworkCore.Generator
         {
             _options.Variables.Set(VariableConstants.TableSchema, ToLegalName(tableKeySchema.PrincipalTable.Schema));
             _options.Variables.Set(VariableConstants.TableName, ToLegalName(tableKeySchema.PrincipalTable.Name));
-            
-            Entity primaryEntity = GetEntity(entityContext, tableKeySchema.PrincipalTable, false, false);
-            
+
+            var primaryEntity = GetEntity(entityContext, tableKeySchema.PrincipalTable, false, false);
+
             _options.Variables.Set(VariableConstants.TableSchema, ToLegalName(tableKeySchema.Table.Schema));
             _options.Variables.Set(VariableConstants.TableName, ToLegalName(tableKeySchema.Table.Name));
 
-            string primaryName = primaryEntity.EntityClass;
-            string foreignName = foreignEntity.EntityClass;
+            var primaryName = primaryEntity.EntityClass;
+            var foreignName = foreignEntity.EntityClass;
 
-            string relationshipName = tableKeySchema.Name;
+            var relationshipName = tableKeySchema.Name;
             relationshipName = _namer.UniqueRelationshipName(relationshipName);
 
             var foreignMembers = GetKeyMembers(foreignEntity, tableKeySchema.Columns, tableKeySchema.Name);
-            bool foreignMembersRequired = foreignMembers.Any(c => c.IsRequired);
+            var foreignMembersRequired = foreignMembers.Any(c => c.IsRequired);
 
             var primaryMembers = GetKeyMembers(primaryEntity, tableKeySchema.PrincipalColumns, tableKeySchema.Name);
-            bool primaryMembersRequired = primaryMembers.Any(c => c.IsRequired);
+            var primaryMembersRequired = primaryMembers.Any(c => c.IsRequired);
 
             // skip invalid fkeys
             if (foreignMembers.Count == 0 || primaryMembers.Count == 0)
                 return;
 
-            Relationship foreignRelationship = foreignEntity.Relationships
+            var foreignRelationship = foreignEntity.Relationships
                 .FirstOrDefault(r => r.RelationshipName == relationshipName && r.IsForeignKey);
 
             if (foreignRelationship == null)
@@ -293,14 +291,14 @@ namespace EntityFrameworkCore.Generator
             foreignRelationship.Entity = foreignEntity;
             foreignRelationship.Properties = new PropertyCollection(foreignMembers);
 
-            string prefix = GetMemberPrefix(foreignRelationship, primaryName, foreignName);
+            var prefix = GetMemberPrefix(foreignRelationship, primaryName, foreignName);
 
-            string foreignPropertyName = ToPropertyName(foreignEntity.EntityClass, prefix + primaryName);
+            var foreignPropertyName = ToPropertyName(foreignEntity.EntityClass, prefix + primaryName);
             foreignPropertyName = _namer.UniqueName(foreignEntity.EntityClass, foreignPropertyName);
             foreignRelationship.PropertyName = foreignPropertyName;
 
             // add reverse
-            Relationship primaryRelationship = primaryEntity.Relationships
+            var primaryRelationship = primaryEntity.Relationships
                 .FirstOrDefault(r => r.RelationshipName == relationshipName && r.IsForeignKey == false);
 
             if (primaryRelationship == null)
@@ -318,13 +316,13 @@ namespace EntityFrameworkCore.Generator
             primaryRelationship.Entity = primaryEntity;
             primaryRelationship.Properties = new PropertyCollection(primaryMembers);
 
-            bool isOneToOne = IsOneToOne(tableKeySchema, foreignRelationship);
+            var isOneToOne = IsOneToOne(tableKeySchema, foreignRelationship);
             if (isOneToOne)
                 primaryRelationship.Cardinality = primaryMembersRequired ? Cardinality.One : Cardinality.ZeroOrOne;
             else
                 primaryRelationship.Cardinality = Cardinality.Many;
 
-            string primaryPropertyName = prefix + foreignName;
+            var primaryPropertyName = prefix + foreignName;
             if (!isOneToOne)
                 primaryPropertyName = RelationshipName(primaryPropertyName);
 
@@ -517,18 +515,18 @@ namespace EntityFrameworkCore.Generator
 
         private string GetMemberPrefix(Relationship relationship, string primaryClass, string foreignClass)
         {
-            string thisKey = relationship.Properties
+            var thisKey = relationship.Properties
                 .Select(p => p.PropertyName)
                 .FirstOrDefault() ?? string.Empty;
 
-            string otherKey = relationship.PrimaryProperties
+            var otherKey = relationship.PrimaryProperties
                 .Select(p => p.PropertyName)
                 .FirstOrDefault() ?? string.Empty;
 
-            bool isSameName = thisKey.Equals(otherKey, StringComparison.OrdinalIgnoreCase);
+            var isSameName = thisKey.Equals(otherKey, StringComparison.OrdinalIgnoreCase);
             isSameName = (isSameName || thisKey.Equals(primaryClass + otherKey, StringComparison.OrdinalIgnoreCase));
 
-            string prefix = string.Empty;
+            var prefix = string.Empty;
             if (isSameName)
                 return prefix;
 
@@ -547,10 +545,10 @@ namespace EntityFrameworkCore.Generator
                 .Select(p => p.ColumnName)
                 .FirstOrDefault();
 
-            bool isFkeyPkey = tableKeySchema.PrincipalTable.PrimaryKey != null
-                              && tableKeySchema.Table.PrimaryKey != null
-                              && tableKeySchema.Table.PrimaryKey.Columns.Count == 1
-                              && tableKeySchema.Table.PrimaryKey.Columns.Any(c => c.Name == foreignColumn);
+            var isFkeyPkey = tableKeySchema.PrincipalTable.PrimaryKey != null
+                             && tableKeySchema.Table.PrimaryKey != null
+                             && tableKeySchema.Table.PrimaryKey.Columns.Count == 1
+                             && tableKeySchema.Table.PrimaryKey.Columns.Any(c => c.Name == foreignColumn);
 
             if (isFkeyPkey)
                 return true;
@@ -608,14 +606,14 @@ namespace EntityFrameworkCore.Generator
             if (_options.Data.Entity.PrefixWithSchemaName && tableSchema != null)
                 className = $"{tableSchema}{tableName}";
 
-            string legalName = ToLegalName(className);
+            var legalName = ToLegalName(className);
 
             return legalName;
         }
 
         private string ToPropertyName(string className, string name)
         {
-            string propertyName = ToLegalName(name);
+            var propertyName = ToLegalName(name);
             if (className.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
                 propertyName += "Member";
 
@@ -627,7 +625,7 @@ namespace EntityFrameworkCore.Generator
             if (string.IsNullOrWhiteSpace(name))
                 return string.Empty;
 
-            string legalName = name;
+            var legalName = name;
 
             // remove invalid leading identifiers
             if (Regex.IsMatch(name, @"^[^a-zA-Z_]+"))

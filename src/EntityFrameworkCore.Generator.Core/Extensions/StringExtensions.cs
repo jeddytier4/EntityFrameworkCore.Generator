@@ -34,7 +34,7 @@ namespace EntityFrameworkCore.Generator.Extensions
             if (item == null)
                 return true;
 
-            for (int i = 0; i < item.Length; i++)
+            for (var i = 0; i < item.Length; i++)
                 if (!char.IsWhiteSpace(item[i]))
                     return false;
 
@@ -79,7 +79,7 @@ namespace EntityFrameworkCore.Generator.Extensions
             if (string.IsNullOrEmpty(value))
                 return value;
 
-            string output = ToPascalCase(value);
+            var output = ToPascalCase(value);
             if (output.Length > 2)
                 return char.ToLower(output[0]) + output.Substring(1);
 
@@ -113,7 +113,7 @@ namespace EntityFrameworkCore.Generator.Extensions
 
             if (names.Length > 1)
             {
-                foreach (string name in names)
+                foreach (var name in names)
                 {
                     if (name.Length > 1)
                     {

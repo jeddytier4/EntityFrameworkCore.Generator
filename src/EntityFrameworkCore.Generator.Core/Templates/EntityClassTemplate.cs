@@ -190,6 +190,7 @@ namespace EntityFrameworkCore.Generator.Templates
                             CodeBuilder.AppendLine($"/// <seealso cref=\"{property.PropertyName}\" />");
                     }
 
+                    propertyName = propertyName.Singularize();
                     CodeBuilder.AppendLine($"public virtual {primaryFullName} {propertyName} {{ get; set; }}");
                     CodeBuilder.AppendLine();
                 }

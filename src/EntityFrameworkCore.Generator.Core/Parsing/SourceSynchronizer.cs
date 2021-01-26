@@ -1,9 +1,9 @@
-﻿using EntityFrameworkCore.Generator.Metadata.Generation;
+﻿using System.IO;
+using System.Linq;
+using EntityFrameworkCore.Generator.Metadata.Generation;
 using EntityFrameworkCore.Generator.Metadata.Parsing;
 using EntityFrameworkCore.Generator.Options;
 using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Linq;
 
 namespace EntityFrameworkCore.Generator.Parsing
 {

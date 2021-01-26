@@ -9,9 +9,13 @@ using EntityFrameworkCore.Generator.Templates;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Scaffolding;
 using Microsoft.EntityFrameworkCore.Scaffolding.Metadata;
+using Microsoft.EntityFrameworkCore.Sqlite.Design.Internal;
+using Microsoft.EntityFrameworkCore.SqlServer.Design.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Design.Internal;
+using Pomelo.EntityFrameworkCore.MySql.Design.Internal;
 
 namespace EntityFrameworkCore.Generator
 {
@@ -432,25 +436,25 @@ namespace EntityFrameworkCore.Generator
 
         private void ConfigureMySqlServices(IServiceCollection services)
         {
-            var designTimeServices = new Pomelo.EntityFrameworkCore.MySql.Design.Internal.MySqlDesignTimeServices();
+            var designTimeServices = new MySqlDesignTimeServices();
             designTimeServices.ConfigureDesignTimeServices(services);
         }
 
         private void ConfigurePostgresServices(IServiceCollection services)
         {
-            var designTimeServices = new Npgsql.EntityFrameworkCore.PostgreSQL.Design.Internal.NpgsqlDesignTimeServices();
+            var designTimeServices = new NpgsqlDesignTimeServices();
             designTimeServices.ConfigureDesignTimeServices(services);
         }
 
         private void ConfigureSqlServerServices(IServiceCollection services)
         {
-            var designTimeServices = new Microsoft.EntityFrameworkCore.SqlServer.Design.Internal.SqlServerDesignTimeServices();
+            var designTimeServices = new SqlServerDesignTimeServices();
             designTimeServices.ConfigureDesignTimeServices(services);
         }
 
         private void ConfigureSqliteServices(IServiceCollection services)
         {
-            var designTimeServices = new Microsoft.EntityFrameworkCore.Sqlite.Design.Internal.SqliteDesignTimeServices();
+            var designTimeServices = new SqliteDesignTimeServices();
             designTimeServices.ConfigureDesignTimeServices(services);
         }
     }
