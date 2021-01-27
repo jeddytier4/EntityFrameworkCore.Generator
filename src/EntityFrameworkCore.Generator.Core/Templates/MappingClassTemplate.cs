@@ -165,7 +165,7 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GenerateRelationshipMapping()
         {
-            if (_entity.Relationships.Count > 0)
+            if (_entity.Relationships.Count > 0 && (_entity.Relationships.Where(e => e.IsMapped).ToList().Count > 0))
             {
                 CodeBuilder.AppendLine("// relationships");
             }
@@ -220,7 +220,7 @@ namespace EntityFrameworkCore.Generator.Templates
 
             if (keys.Count == 1)
             {
-                var propertyName = Options.Data.Entity.RelationshipNaming == RelationshipNaming.Plural
+                var propertyName = Options.Data.Entity.RelationshipNaming == RelationshipNaming.Suffix
                     ? keys.First().PropertyName
                         .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
                         .Replace(Options.Data.Entity.Suffix, "")
@@ -237,7 +237,7 @@ namespace EntityFrameworkCore.Generator.Templates
                 CodeBuilder.Append("new { ");
                 foreach (var p in keys)
                 {
-                    var propertyName = Options.Data.Entity.RelationshipNaming == RelationshipNaming.Plural
+                    var propertyName = Options.Data.Entity.RelationshipNaming == RelationshipNaming.Suffix
                         ? p.PropertyName
                             .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
                             .Replace(Options.Data.Entity.Suffix, "")
@@ -255,7 +255,8 @@ namespace EntityFrameworkCore.Generator.Templates
                 CodeBuilder.Append("}");
             }
             CodeBuilder.Append(")");
-
+            CodeBuilder.AppendLine();
+            CodeBuilder.Append(".OnDelete(DeleteBehavior.Restrict)");
             if (!string.IsNullOrEmpty(relationship.RelationshipName))
             {
                 CodeBuilder.AppendLine();
@@ -410,6 +411,15 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GenerateTableMapping()
         {
+            CodeBuilder.AppendLine("// custom generator settings");
+            CodeBuilder.AppendLine("builder.GenerateHistoryEntity(false);");
+            CodeBuilder.AppendLine("builder.GenerateDalCriteriaClass(false);");
+            CodeBuilder.AppendLine("builder.GenerateDalFieldsClass(false);");
+            CodeBuilder.AppendLine("builder.GenerateEnumCheckConstraints(false);");
+            CodeBuilder.AppendLine();
+            
+            
+            
             CodeBuilder.AppendLine("// table");
 
             var method = _entity.IsView
