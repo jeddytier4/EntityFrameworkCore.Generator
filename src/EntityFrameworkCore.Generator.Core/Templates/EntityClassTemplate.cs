@@ -151,8 +151,14 @@ namespace EntityFrameworkCore.Generator.Templates
             foreach (var relationship in _entity.Relationships.OrderBy(r => r.PropertyName))
             {
                 var propertyName = Options.Data.Entity.RelationshipNaming == RelationshipNaming.Plural ?
-                    relationship.PrimaryEntity.TableName.ToSafeName().Pluralize(false).Pascalize()
-                    : relationship.PrimaryEntity.TableName.ToSafeName().Pascalize();
+                    relationship.PropertyName
+                        .Replace(Options.Data.Entity.Suffix.Pluralize(true),"")
+                        .Replace(Options.Data.Entity.Suffix,"")
+                        .Pluralize(false).Pascalize().ToSafeName()
+                    : relationship.PropertyName
+                        .Replace(Options.Data.Entity.Suffix.Pluralize(true),"")
+                        .Replace(Options.Data.Entity.Suffix,"")
+                        .Pascalize().ToSafeName();
                 var primaryNamespace = relationship.PrimaryEntity.EntityNamespace;
                 var primaryName = relationship.PrimaryEntity.EntityClass.ToSafeName();
                 var primaryFullName = _entity.EntityNamespace != primaryNamespace

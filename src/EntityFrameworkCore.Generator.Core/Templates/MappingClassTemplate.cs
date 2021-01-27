@@ -3,6 +3,7 @@ using System.Linq;
 using EntityFrameworkCore.Generator.Extensions;
 using EntityFrameworkCore.Generator.Metadata.Generation;
 using EntityFrameworkCore.Generator.Options;
+using Humanizer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -179,6 +180,7 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GenerateRelationshipMapping(Relationship relationship)
         {
+
             CodeBuilder.Append("builder.HasOne(t => t.");
             CodeBuilder.Append(relationship.PropertyName);
             CodeBuilder.Append(")");
@@ -189,8 +191,16 @@ namespace EntityFrameworkCore.Generator.Templates
             CodeBuilder.Append(relationship.PrimaryCardinality == Cardinality.Many
                 ? ".WithMany(t => t."
                 : ".WithOne(t => t.");
-
-            CodeBuilder.Append(relationship.PrimaryPropertyName);
+            var primaryPropertyName = Options.Data.Entity.RelationshipNaming == RelationshipNaming.Plural
+                ? relationship.PrimaryPropertyName
+                    .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
+                    .Replace(Options.Data.Entity.Suffix, "")
+                    .Pluralize(false).Pascalize().ToSafeName()
+                : relationship.PrimaryPropertyName
+                    .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
+                    .Replace(Options.Data.Entity.Suffix, "")
+                    .Pascalize().ToSafeName();
+            CodeBuilder.Append(primaryPropertyName);
             CodeBuilder.Append(")");
 
             CodeBuilder.AppendLine();
@@ -210,7 +220,16 @@ namespace EntityFrameworkCore.Generator.Templates
 
             if (keys.Count == 1)
             {
-                var propertyName = keys.First().PropertyName.ToSafeName();
+                var propertyName = Options.Data.Entity.RelationshipNaming == RelationshipNaming.Plural
+                    ? keys.First().PropertyName
+                        .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
+                        .Replace(Options.Data.Entity.Suffix, "")
+                        .Pluralize(false).Pascalize().ToSafeName()
+                    : keys.First().PropertyName
+                        .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
+                        .Replace(Options.Data.Entity.Suffix, "")
+                        .Pascalize().ToSafeName();
+                //var propertyName = keys.First().PropertyName.ToSafeName();
                 CodeBuilder.Append($"d.{propertyName}");
             }
             else
@@ -218,10 +237,19 @@ namespace EntityFrameworkCore.Generator.Templates
                 CodeBuilder.Append("new { ");
                 foreach (var p in keys)
                 {
+                    var propertyName = Options.Data.Entity.RelationshipNaming == RelationshipNaming.Plural
+                        ? p.PropertyName
+                            .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
+                            .Replace(Options.Data.Entity.Suffix, "")
+                            .Pluralize(false).Pascalize().ToSafeName()
+                        :p.PropertyName
+                            .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
+                            .Replace(Options.Data.Entity.Suffix, "")
+                            .Pascalize().ToSafeName();
                     if (wroteLine)
                         CodeBuilder.Append(", ");
 
-                    CodeBuilder.Append($"d.{p.PropertyName}");
+                    CodeBuilder.Append($"d.{propertyName}");
                     wroteLine = true;
                 }
                 CodeBuilder.Append("}");
