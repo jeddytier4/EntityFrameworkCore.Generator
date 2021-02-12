@@ -2,6 +2,7 @@
 using EntityFrameworkCore.Generator.Extensions;
 using EntityFrameworkCore.Generator.Metadata.Generation;
 using EntityFrameworkCore.Generator.Options;
+using Humanizer;
 
 namespace EntityFrameworkCore.Generator.Templates
 {
@@ -89,8 +90,14 @@ namespace EntityFrameworkCore.Generator.Templates
             foreach (var entityType in _entityContext.Entities.OrderBy(e => e.ContextProperty))
             {
                 var entityClass = entityType.EntityClass.ToSafeName();
-                var propertyName = entityType.ContextProperty.ToSafeName();
-                var fullName = $"{entityType.EntityNamespace}.{entityClass}";
+                var propertyName = entityType.ContextProperty.ToSafeName()
+                    .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
+                    .Replace(Options.Data.Entity.Suffix, "")
+                    .Pluralize(false).Pascalize().ToSafeName();
+
+                //var propertyName = entityType.ContextProperty.ToSafeName();
+                //var fullName = $"{entityType.EntityNamespace}.{entityClass}";
+                var fullName = $"{entityClass}";
 
                 if (Options.Data.Context.Document)
                 {

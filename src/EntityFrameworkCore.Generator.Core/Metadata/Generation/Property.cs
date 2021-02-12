@@ -36,6 +36,10 @@ namespace EntityFrameworkCore.Generator.Metadata.Generation
 
         public bool? IsRowVersion { get; set; }
 
+        public bool? IsHierarchyId { get; set; }
+
+        public string ComputedSql { get; set;}
+
         public bool? IsUnique { get; set; }
 
         [Obsolete("Value no longer used, will be deleted")]

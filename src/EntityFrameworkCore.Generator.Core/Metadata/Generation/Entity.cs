@@ -165,6 +165,8 @@ namespace EntityFrameworkCore.Generator.Metadata.Generation
 
         public List<Index> Indexes {get;set;}
 
+        public List<UniqueConstraint> UniqueConstraints { get; set; }
+
         void IOptionVariable.Set(VariableDictionary variableDictionary)
         {
             variableDictionary.Set(VariableConstants.TableSchema, TableSchema);

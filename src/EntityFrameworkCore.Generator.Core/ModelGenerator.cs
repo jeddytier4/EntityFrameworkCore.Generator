@@ -41,7 +41,7 @@ namespace EntityFrameworkCore.Generator
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _typeMapper = typeMappingSource;
 
-            var entityContext = new EntityContext {DatabaseName = databaseModel.DatabaseName};
+            var entityContext = new EntityContext { DatabaseName = databaseModel.DatabaseName };
 
             // update database variables
             _options.Database.Name = ToLegalName(databaseModel.DatabaseName);
@@ -63,7 +63,7 @@ namespace EntityFrameworkCore.Generator
 
             foreach (var table in tables)
             {
-                if (IsIgnored(table, _options.Database.Exclude))
+                if (IsIgnored(table, _options.Database.Exclude) || (table is DatabaseView) || table.Name.StartsWith("TMP_") || table.Name.StartsWith("TEMP_") || table.Name.StartsWith("KB_") || table.Name.StartsWith("PF_") || table.Name.StartsWith("OLD_") || table.Name.EndsWith("Set") || table.Name.ToLower().StartsWith("history"))
                 {
                     _logger.LogDebug("  Skipping Table : {schema}.{name}", table.Schema, table.Name);
                     continue;
@@ -71,10 +71,10 @@ namespace EntityFrameworkCore.Generator
 
                 _logger.LogDebug("  Processing Table : {schema}.{name}", table.Schema, table.Name);
 
-                
+
                 _options.Variables.Set(VariableConstants.TableSchema, ToLegalName(table.Schema));
                 _options.Variables.Set(VariableConstants.TableName, ToLegalName(table.Name));
-                
+
 
                 var entity = GetEntity(entityContext, table);
                 GetModels(entity);
@@ -112,30 +112,14 @@ namespace EntityFrameworkCore.Generator
                 Context = entityContext,
                 TableName = tableSchema.Name,
                 TableSchema = tableSchema.Schema,
-                Indexes = new List<Index>()
+                Indexes = new List<Index>(),
+                UniqueConstraints = new List<Metadata.Generation.UniqueConstraint>()
             };
-            
-            var entityClass = ToClassName(_options.Data.Entity.Name,"") + _options.Data.Entity.Suffix;
+
+            var entityClass = ToClassName(_options.Data.Entity.Name, "") + _options.Data.Entity.Suffix;
             if (entityClass.IsNullOrEmpty())
                 entityClass = ToClassName(tableSchema.Name, tableSchema.Schema);
-            
-            foreach (var index in tableSchema.Indexes)
-            {
-                
-                var tmpIndex = new Index
-                {
-                    Filter = index.Filter,
-                    IsUnique = index.IsUnique,
-                    Name = index.Name,
-                    IsProcessed = true,
-                    Columns = new List<string>()
-                };
-                foreach (var column in index.Columns)
-                {
-                    tmpIndex.Columns.Add(column.Name);
-                }
-                entity.Indexes.Add(tmpIndex);
-            }
+
             entityClass = _namer.UniqueClassName(entityClass);
 
             var entityNamespace = _options.Data.Entity.Namespace;
@@ -161,6 +145,43 @@ namespace EntityFrameworkCore.Generator
             entity.ContextProperty = contextName;
 
             entity.IsView = tableSchema is DatabaseView;
+            
+            foreach (var index in tableSchema.Indexes)
+            {
+
+                var tmpIndex = new Index
+                {
+                    Filter = index.Filter,
+                    IsUnique = index.IsUnique,
+                    Name = index.Name,
+                    IsProcessed = true,
+                    Columns = new List<string>()
+                };
+                foreach (var column in index.Columns)
+                {
+                    var columnName = Regex.IsMatch(column.Name, @"^\d") ? "_" + column.Name : column.Name;
+                    columnName = column.Name.Contains("_") ? columnName : ToPropertyName(entity.EntityClass, column.Name);
+                    tmpIndex.Columns.Add(columnName);
+                }
+                entity.Indexes.Add(tmpIndex);
+            }
+            foreach (var uc in tableSchema.UniqueConstraints)
+            {
+
+                var tmpUniqueConstraint = new Metadata.Generation.UniqueConstraint
+                {
+                    Name = uc.Name,
+                    IsProcessed = true,
+                    Columns = new List<string>()
+                };
+                foreach (var column in uc.Columns)
+                {
+                    var columnName = Regex.IsMatch(column.Name, @"^\d") ? "_" + column.Name : column.Name;
+                    columnName = column.Name.Contains("_") ? columnName : ToPropertyName(entity.EntityClass, column.Name);
+                    tmpUniqueConstraint.Columns.Add(columnName);
+                }
+                entity.UniqueConstraints.Add(tmpUniqueConstraint);
+            }
 
             entityContext.Entities.Add(entity);
 
@@ -174,7 +195,7 @@ namespace EntityFrameworkCore.Generator
             {
                 var table = column.Table;
 
-                var mapping = _typeMapper.FindMapping(column.StoreType);
+                var mapping = column.StoreType == "hierarchyid" ? _typeMapper.FindMapping("rowversion") : _typeMapper.FindMapping(column.StoreType);
                 if (mapping == null)
                 {
                     _logger.LogWarning("Failed to map type {storeType} for {column}.", column.StoreType, column.Name);
@@ -192,8 +213,9 @@ namespace EntityFrameworkCore.Generator
                     };
                     entity.Properties.Add(property);
                 }
-
-                var propertyName = ToPropertyName(entity.EntityClass, column.Name);
+                var propertyName = column.Name.Contains("_") ? column.Name : ToPropertyName(entity.EntityClass, column.Name);
+                if (Regex.IsMatch(column.Name, @"^\d")) propertyName = "_" + column.Name;
+                //var propertyName = ToPropertyName(entity.EntityClass, column.Name);
                 propertyName = _namer.UniqueName(entity.EntityClass, propertyName);
 
                 property.PropertyName = propertyName;
@@ -201,6 +223,8 @@ namespace EntityFrameworkCore.Generator
                 property.IsNullable = column.IsNullable;
 
                 property.IsRowVersion = column.IsRowVersion();
+
+                property.IsHierarchyId = column.StoreType == "hierarchyid";
 
                 property.IsPrimaryKey = table.PrimaryKey?.Columns.Contains(column) == true;
                 property.IsForeignKey = table.ForeignKeys.Any(c => c.Columns.Contains(column));
@@ -211,10 +235,12 @@ namespace EntityFrameworkCore.Generator
                 property.Default = column.DefaultValueSql;
                 property.ValueGenerated = column.ValueGenerated;
 
+                property.ComputedSql = column.IsStored.GetValueOrDefault() ? column.ComputedColumnSql + " PERSISTED" : column.ComputedColumnSql;
+
                 if (property.ValueGenerated == null && !string.IsNullOrWhiteSpace(column.ComputedColumnSql))
                     property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
 
-                property.StoreType = mapping.StoreType;
+                property.StoreType = column.StoreType == "hierarchyid" ? "hierarchyid" : mapping.StoreType;
                 property.NativeType = mapping.StoreTypeNameBase;
                 property.DataType = mapping.DbType ?? DbType.AnsiString;
                 property.SystemType = mapping.ClrType;
@@ -293,7 +319,8 @@ namespace EntityFrameworkCore.Generator
 
             var prefix = GetMemberPrefix(foreignRelationship, primaryName, foreignName);
 
-            var foreignPropertyName = ToPropertyName(foreignEntity.EntityClass, prefix + primaryName);
+            var foreignPropertyName = string.IsNullOrEmpty(prefix) ? ToPropertyName(foreignEntity.EntityClass, prefix + primaryName) : ToPropertyName(foreignEntity.EntityClass, prefix);
+
             foreignPropertyName = _namer.UniqueName(foreignEntity.EntityClass, foreignPropertyName);
             foreignRelationship.PropertyName = foreignPropertyName;
 
@@ -533,7 +560,7 @@ namespace EntityFrameworkCore.Generator
             prefix = thisKey.Replace(otherKey, "");
             prefix = prefix.Replace(primaryClass, "");
             prefix = prefix.Replace(foreignClass, "");
-            prefix = Regex.Replace(prefix, @"(_ID|_id|_Id|\.ID|\.id|\.Id|ID|Id)$", "");
+            prefix = Regex.Replace(prefix, @"(_ID|_id|_Id|\.ID|\.id|\.Id|ID|Id|UID|Uid|uid)$", "");
             prefix = Regex.Replace(prefix, @"^\d", "");
 
             return prefix;
@@ -635,7 +662,7 @@ namespace EntityFrameworkCore.Generator
             if (legalName.IsNullOrWhiteSpace())
                 legalName = "Number" + name;
 
-            legalName = legalName.ToPascalCase();
+            legalName = legalName.Contains("_") ? legalName : legalName.ToPascalCase();
 
             return legalName;
         }

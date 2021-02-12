@@ -19,9 +19,12 @@ namespace EntityFrameworkCore.Generator.Templates
         {
             CodeBuilder.Clear();
 
+            CodeBuilder.AppendLine("using Microsoft.EntityFrameworkCore;");
+            CodeBuilder.AppendLine("using Microsoft.EntityFrameworkCore.Metadata.Builders;");
+            CodeBuilder.AppendLine("using Microsoft.EntityFrameworkCore.Storage.ValueConversion;");
             CodeBuilder.AppendLine("using System;");
             CodeBuilder.AppendLine("using System.Collections.Generic;");
-            CodeBuilder.AppendLine("using Microsoft.EntityFrameworkCore;");
+            
             CodeBuilder.AppendLine();
 
             CodeBuilder.AppendLine($"namespace {_entity.EntityNamespace}");
@@ -61,9 +64,8 @@ namespace EntityFrameworkCore.Generator.Templates
 
             using (CodeBuilder.Indent())
             {
-                GenerateConstructor();
-
                 GenerateProperties();
+                GenerateConstructor();
                 GenerateRelationshipProperties();
             }
 
@@ -105,18 +107,19 @@ namespace EntityFrameworkCore.Generator.Templates
                         relationship.PropertyName
                             .Replace(Options.Data.Entity.Suffix.Pluralize(true),"")
                             .Replace(Options.Data.Entity.Suffix,"")
-                            .Pluralize(false).Pascalize().ToSafeName()
+                            .Pluralize(false).ToSafeName()
                         : relationship.PropertyName
                             .Replace(Options.Data.Entity.Suffix.Pluralize(true),"")
                             .Replace(Options.Data.Entity.Suffix,"")
-                            .Pascalize().ToSafeName();
+                            .ToSafeName();
+                    var propName = propertyName.Contains("_") ? propertyName : propertyName.Pascalize();
                     var primaryNamespace = relationship.PrimaryEntity.EntityNamespace;
                     var primaryName = relationship.PrimaryEntity.EntityClass.ToSafeName();
                     var primaryFullName = _entity.EntityNamespace != primaryNamespace
                         ? $"{primaryNamespace}.{primaryName}"
                         : primaryName;
 
-                    CodeBuilder.AppendLine($"{propertyName} = new HashSet<{primaryFullName}>();");
+                    CodeBuilder.AppendLine($"{propName} = new HashSet<{primaryFullName}>();");
                 }
                 //CodeBuilder.AppendLine("#endregion");
             }
@@ -131,8 +134,12 @@ namespace EntityFrameworkCore.Generator.Templates
             foreach (var property in _entity.Properties)
             {
                 var propertyType = property.SystemType.ToNullableType(property.IsNullable == true);
-                var propertyName = property.ColumnName.ToSafeName();
-
+                if (property.IsRowVersion.GetValueOrDefault())
+                {
+                    propertyType = typeof(ulong).ToNullableType(false);
+                }
+                //var propertyName = property.ColumnName.ToPascalCase().ToSafeName();
+                var propertyName = property.PropertyName.ToSafeName().Contains("_") ? property.PropertyName.ToSafeName() : property.PropertyName.ToSafeName().Pascalize();
 
                 if (Options.Data.Entity.Document)
                 {
@@ -145,7 +152,7 @@ namespace EntityFrameworkCore.Generator.Templates
                 }
 
                 CodeBuilder.AppendLine($"public {propertyType} {propertyName} {{ get; set; }}");
-                CodeBuilder.AppendLine();
+                //CodeBuilder.AppendLine();
             }
             //CodeBuilder.AppendLine("#endregion");
             CodeBuilder.AppendLine();
@@ -160,11 +167,12 @@ namespace EntityFrameworkCore.Generator.Templates
                     relationship.PropertyName
                         .Replace(Options.Data.Entity.Suffix.Pluralize(true),"")
                         .Replace(Options.Data.Entity.Suffix,"")
-                        .Pluralize(false).Pascalize().ToSafeName()
+                        .Pluralize(false).ToSafeName()
                     : relationship.PropertyName
                         .Replace(Options.Data.Entity.Suffix.Pluralize(true),"")
                         .Replace(Options.Data.Entity.Suffix,"")
-                        .Pascalize().ToSafeName();
+                        .ToSafeName();
+                var propName = propertyName.Contains("_") ? propertyName : propertyName.Pascalize();
                 var primaryNamespace = relationship.PrimaryEntity.EntityNamespace;
                 var primaryName = relationship.PrimaryEntity.EntityClass.ToSafeName();
                 var primaryFullName = _entity.EntityNamespace != primaryNamespace
@@ -184,8 +192,8 @@ namespace EntityFrameworkCore.Generator.Templates
                     }
 
 
-                    CodeBuilder.AppendLine($"public virtual ICollection<{primaryFullName}> {propertyName} {{ get; set; }}");
-                    CodeBuilder.AppendLine();
+                    CodeBuilder.AppendLine($"public ICollection<{primaryFullName}> {propName} {{ get; set; }}");
+                    //CodeBuilder.AppendLine();
                 }
                 else
                 {
@@ -202,9 +210,9 @@ namespace EntityFrameworkCore.Generator.Templates
                             CodeBuilder.AppendLine($"/// <seealso cref=\"{property.PropertyName}\" />");
                     }
 
-                    propertyName = propertyName.Singularize();
-                    CodeBuilder.AppendLine($"public virtual {primaryFullName} {propertyName} {{ get; set; }}");
-                    CodeBuilder.AppendLine();
+                    propName = propName.Singularize();
+                    CodeBuilder.AppendLine($"public {primaryFullName} {propName} {{ get; set; }}");
+                    //CodeBuilder.AppendLine();
                 }
             }
             //CodeBuilder.AppendLine("#endregion");

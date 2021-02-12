@@ -26,6 +26,7 @@ namespace EntityFrameworkCore.Generator.Templates
             {
                 using (CodeBuilder.Indent())
                 {
+                    CodeBuilder.DecrementIndent();
                     GenerateClass();
                 }
             }
@@ -33,9 +34,9 @@ namespace EntityFrameworkCore.Generator.Templates
             {
                 CodeBuilder.Clear();
 
+                CodeBuilder.AppendLine("using Microsoft.EntityFrameworkCore;");
                 CodeBuilder.AppendLine("using System;");
                 CodeBuilder.AppendLine("using System.Collections.Generic;");
-                CodeBuilder.AppendLine("using Microsoft.EntityFrameworkCore;");
                 CodeBuilder.AppendLine();
 
                 CodeBuilder.AppendLine($"namespace {_entity.MappingNamespace}");
@@ -66,7 +67,7 @@ namespace EntityFrameworkCore.Generator.Templates
                 CodeBuilder.AppendLine("/// </summary>");
             }
 
-            CodeBuilder.AppendLine($"internal class {mappingClass}");
+            CodeBuilder.Append($"internal class {mappingClass} ");
 
             using (CodeBuilder.Indent())
                 CodeBuilder.AppendLine($": IEntityTypeConfiguration<{entityClass}>");
@@ -142,7 +143,7 @@ namespace EntityFrameworkCore.Generator.Templates
                 CodeBuilder.AppendLine("/// <param name=\"builder\">The builder to be used to configure the entity type.</param>");
             }
 
-            CodeBuilder.AppendLine($"public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<{entityClass}> builder)");
+            CodeBuilder.AppendLine($"public void Configure(EntityTypeBuilder<{entityClass}> builder)");
             CodeBuilder.AppendLine("{");
 
             using (CodeBuilder.Indent())
@@ -151,10 +152,9 @@ namespace EntityFrameworkCore.Generator.Templates
 
                 GenerateTableMapping();
                 GenerateKeyMapping();
-                GenerateIndexMapping();
                 GeneratePropertyMapping();
                 GenerateRelationshipMapping();
-
+                GenerateIndexMapping();
                 //CodeBuilder.AppendLine("#endregion");
             }
 
@@ -169,7 +169,7 @@ namespace EntityFrameworkCore.Generator.Templates
             {
                 CodeBuilder.AppendLine("// relationships");
             }
-            
+
             foreach (var relationship in _entity.Relationships.Where(e => e.IsMapped))
             {
                 GenerateRelationshipMapping(relationship);
@@ -180,27 +180,32 @@ namespace EntityFrameworkCore.Generator.Templates
 
         private void GenerateRelationshipMapping(Relationship relationship)
         {
-
-            CodeBuilder.Append("builder.HasOne(t => t.");
-            CodeBuilder.Append(relationship.PropertyName);
+            var hasOnePropertyName = relationship.PropertyName
+                .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
+                .Replace(Options.Data.Entity.Suffix, "")
+                .ToSafeName();
+            var propName = hasOnePropertyName.Contains("_") ? hasOnePropertyName : hasOnePropertyName.Pascalize();
+            CodeBuilder.Append("builder.HasOne(e => e.");
+            CodeBuilder.Append(propName);
             CodeBuilder.Append(")");
             CodeBuilder.AppendLine();
 
             CodeBuilder.IncrementIndent();
 
             CodeBuilder.Append(relationship.PrimaryCardinality == Cardinality.Many
-                ? ".WithMany(t => t."
-                : ".WithOne(t => t.");
-            var primaryPropertyName = Options.Data.Entity.RelationshipNaming == RelationshipNaming.Plural
+                ? ".WithMany(p => p."
+                : ".WithOne(p => p.");
+            var primaryPropertyName = relationship.PrimaryCardinality == Cardinality.Many
                 ? relationship.PrimaryPropertyName
                     .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
                     .Replace(Options.Data.Entity.Suffix, "")
-                    .Pluralize(false).Pascalize().ToSafeName()
+                    .Pluralize(false).ToSafeName()
                 : relationship.PrimaryPropertyName
                     .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
                     .Replace(Options.Data.Entity.Suffix, "")
-                    .Pascalize().ToSafeName();
-            CodeBuilder.Append(primaryPropertyName);
+                    .ToSafeName();
+            propName = primaryPropertyName.Contains("_") ? primaryPropertyName : primaryPropertyName.Pascalize();
+            CodeBuilder.Append(propName);
             CodeBuilder.Append(")");
 
             CodeBuilder.AppendLine();
@@ -208,12 +213,12 @@ namespace EntityFrameworkCore.Generator.Templates
             if (relationship.IsOneToOne)
             {
                 CodeBuilder.Append("<");
-                CodeBuilder.Append(_entity.EntityNamespace);
-                CodeBuilder.Append(".");
+                //CodeBuilder.Append(_entity.EntityNamespace);
+                //CodeBuilder.Append(".");
                 CodeBuilder.Append(_entity.EntityClass.ToSafeName());
                 CodeBuilder.Append(">");
             }
-            CodeBuilder.Append("(d => ");
+            CodeBuilder.Append("(e => ");
 
             var keys = relationship.Properties;
             var wroteLine = false;
@@ -224,13 +229,14 @@ namespace EntityFrameworkCore.Generator.Templates
                     ? keys.First().PropertyName
                         .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
                         .Replace(Options.Data.Entity.Suffix, "")
-                        .Pluralize(false).Pascalize().ToSafeName()
+                        .Pluralize(false).ToSafeName()
                     : keys.First().PropertyName
                         .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
                         .Replace(Options.Data.Entity.Suffix, "")
-                        .Pascalize().ToSafeName();
+                        .ToSafeName();
+                propName = propertyName.Contains("_") ? propertyName : propertyName.Pascalize();
                 //var propertyName = keys.First().PropertyName.ToSafeName();
-                CodeBuilder.Append($"d.{propertyName}");
+                CodeBuilder.Append($"e.{propName}");
             }
             else
             {
@@ -241,15 +247,16 @@ namespace EntityFrameworkCore.Generator.Templates
                         ? p.PropertyName
                             .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
                             .Replace(Options.Data.Entity.Suffix, "")
-                            .Pluralize(false).Pascalize().ToSafeName()
-                        :p.PropertyName
+                            .Pluralize(false).ToSafeName()
+                        : p.PropertyName
                             .Replace(Options.Data.Entity.Suffix.Pluralize(true), "")
                             .Replace(Options.Data.Entity.Suffix, "")
-                            .Pascalize().ToSafeName();
+                            .ToSafeName();
+                    propName = propertyName.Contains("_") ? propertyName : propertyName.Pascalize();
                     if (wroteLine)
                         CodeBuilder.Append(", ");
 
-                    CodeBuilder.Append($"d.{propertyName}");
+                    CodeBuilder.Append($"e.{propName}");
                     wroteLine = true;
                 }
                 CodeBuilder.Append("}");
@@ -257,7 +264,10 @@ namespace EntityFrameworkCore.Generator.Templates
             CodeBuilder.Append(")");
             CodeBuilder.AppendLine();
             CodeBuilder.Append(".OnDelete(DeleteBehavior.Restrict)");
-            if (!string.IsNullOrEmpty(relationship.RelationshipName))
+
+            //_{ string.Join("_", keys.Select(r => r.ColumnName))}
+            var testForeignKeyName = $"FK_{_entity.TableSchema}_{_entity.TableName}_{relationship.PrimaryEntity.TableName.Singularize(false)}";
+            if (!string.IsNullOrEmpty(relationship.RelationshipName) && !(testForeignKeyName == relationship.RelationshipName))
             {
                 CodeBuilder.AppendLine();
                 CodeBuilder.Append(".HasConstraintName(\"");
@@ -289,7 +299,8 @@ namespace EntityFrameworkCore.Generator.Templates
             var isByteArray = property.SystemType == typeof(byte[]);
             var isMoreThanOneLine = false;
             var tempBuilder = new IndentedStringBuilder();
-            tempBuilder.Append($"builder.Property(t => t.{property.ColumnName})");
+            var propName = property.PropertyName.Contains("_") ? property.PropertyName : property.PropertyName.Pascalize();
+            tempBuilder.Append($"builder.Property(e => e.{propName})");
 
             tempBuilder.IncrementIndent();
             //if (property.IsRequired)
@@ -302,13 +313,22 @@ namespace EntityFrameworkCore.Generator.Templates
             {
                 tempBuilder.AppendLine();
                 tempBuilder.Append(".IsRowVersion()");
+                tempBuilder.AppendLine();
+                tempBuilder.Append(".IsRequired()");
+                tempBuilder.AppendLine();
+                tempBuilder.Append(".HasConversion(new NumberToBytesConverter<ulong>())");
+                tempBuilder.AppendLine();
+                tempBuilder.Append(".HasColumnType(\"rowversion\")");
                 isMoreThanOneLine = true;
             }
+            if (propName.StartsWith("_"))
+            {
+                tempBuilder.AppendLine();
+                tempBuilder.Append($".HasColumnName({property.ColumnName.ToLiteral()})");
+            }
 
-            //CodeBuilder.AppendLine();
-            //CodeBuilder.Append($".HasColumnName({property.ColumnName.ToLiteral()})");
 
-            if (!string.IsNullOrEmpty(property.StoreType) && (property.StoreType.ToLiteral().StartsWith("\"decimal") || property.StoreType.ToLiteral().StartsWith("\"date")))
+            if (!string.IsNullOrEmpty(property.StoreType) && (property.StoreType.ToLiteral().StartsWith("\"decimal") || property.StoreType.ToLiteral().StartsWith("\"date") || property.IsHierarchyId.GetValueOrDefault()))
             {
                 tempBuilder.AppendLine();
                 tempBuilder.Append($".HasColumnType({property.StoreType.ToLiteral()})");
@@ -318,14 +338,28 @@ namespace EntityFrameworkCore.Generator.Templates
             {
                 tempBuilder.AppendLine();
                 tempBuilder.Append(".IsUnicode(false)");
+                if (!property.IsNullable.GetValueOrDefault())
+                {
+                    tempBuilder.AppendLine();
+                    tempBuilder.Append(".IsRequired(true)");
+                }
+                else
+                {
+                    tempBuilder.AppendLine();
+                    tempBuilder.Append(".IsRequired(false)");
+                }
                 isMoreThanOneLine = true;
             }
 
             if ((isString || isByteArray) && property.Size > 0)
             {
-                tempBuilder.AppendLine();
-                tempBuilder.Append($".HasMaxLength({property.Size.Value.ToString(CultureInfo.InvariantCulture)})");
-                isMoreThanOneLine = true;
+                if (!property.IsRowVersion.GetValueOrDefault() && !property.IsHierarchyId.GetValueOrDefault())
+                {
+                    tempBuilder.AppendLine();
+                    tempBuilder.Append($".HasMaxLength({property.Size.Value.ToString(CultureInfo.InvariantCulture)})");
+                    isMoreThanOneLine = true;
+                }
+
             }
 
             if (!string.IsNullOrEmpty(property.Default))
@@ -335,23 +369,41 @@ namespace EntityFrameworkCore.Generator.Templates
                 isMoreThanOneLine = true;
             }
 
-            switch (property.ValueGenerated)
+            if (!property.IsRowVersion.GetValueOrDefault())
             {
-                case ValueGenerated.OnAdd:
-                    tempBuilder.AppendLine();
-                    tempBuilder.Append(".ValueGeneratedOnAdd()");
-                    isMoreThanOneLine = true;
-                    break;
-                case ValueGenerated.OnAddOrUpdate:
-                    tempBuilder.AppendLine();
-                    tempBuilder.Append(".ValueGeneratedOnAddOrUpdate()");
-                    isMoreThanOneLine = true;
-                    break;
-                case ValueGenerated.OnUpdate:
-                    tempBuilder.AppendLine();
-                    tempBuilder.Append(".ValueGeneratedOnUpdate()");
-                    isMoreThanOneLine = true;
-                    break;
+                switch (property.ValueGenerated)
+                {
+                    case ValueGenerated.OnAdd:
+                        if (!string.IsNullOrEmpty(property.ComputedSql))
+                        {
+                            tempBuilder.AppendLine();
+                            tempBuilder.Append($".HasComputedColumnSql(\"{property.ComputedSql}\")");
+                        }
+                        tempBuilder.AppendLine();
+                        tempBuilder.Append(".ValueGeneratedOnAdd()");
+                        isMoreThanOneLine = true;
+                        break;
+                    case ValueGenerated.OnAddOrUpdate:
+                        if (!string.IsNullOrEmpty(property.ComputedSql))
+                        {
+                            tempBuilder.AppendLine();
+                            tempBuilder.Append($".HasComputedColumnSql(\"{property.ComputedSql}\")");
+                        }
+                        tempBuilder.AppendLine();
+                        tempBuilder.Append(".ValueGeneratedOnAddOrUpdate()");
+                        isMoreThanOneLine = true;
+                        break;
+                    case ValueGenerated.OnUpdate:
+                        if (!string.IsNullOrEmpty(property.ComputedSql))
+                        {
+                            tempBuilder.AppendLine();
+                            tempBuilder.Append($".HasComputedColumnSql(\"{property.ComputedSql}\")");
+                        }
+                        tempBuilder.AppendLine();
+                        tempBuilder.Append(".ValueGeneratedOnUpdate()");
+                        isMoreThanOneLine = true;
+                        break;
+                }
             }
             tempBuilder.DecrementIndent();
 
@@ -373,20 +425,20 @@ namespace EntityFrameworkCore.Generator.Templates
             if (keys.Count == 0)
             {
                 CodeBuilder.AppendLine("// key");
-                
+
                 CodeBuilder.AppendLine("builder.HasNoKey();");
                 CodeBuilder.AppendLine();
 
                 return;
             }
 
-            CodeBuilder.AppendLine(keys.Count == 1 ? "// key" : "// keys");
-            CodeBuilder.Append("builder.HasKey(t => ");
+            CodeBuilder.AppendLine("// key");
+            CodeBuilder.Append("builder.HasKey(e => ");
 
             if (keys.Count == 1)
             {
-                var propertyName = keys.First().PropertyName.ToSafeName();
-                CodeBuilder.AppendLine($"t.{propertyName});");
+                var propertyName = keys.First().PropertyName.ToSafeName().Contains("_") ? keys.First().PropertyName.ToSafeName() : keys.First().PropertyName.ToSafeName().Pascalize();
+                CodeBuilder.AppendLine($"e.{propertyName});");
                 CodeBuilder.AppendLine();
 
                 return;
@@ -400,7 +452,8 @@ namespace EntityFrameworkCore.Generator.Templates
                 if (wroteLine)
                     CodeBuilder.Append(", ");
 
-                CodeBuilder.Append("t.");
+                CodeBuilder.Append("e.");
+                var propName = p.PropertyName.Contains("_") ? p.PropertyName : p.PropertyName.Pascalize();
                 CodeBuilder.Append(p.PropertyName);
                 wroteLine = true;
             }
@@ -417,9 +470,9 @@ namespace EntityFrameworkCore.Generator.Templates
             CodeBuilder.AppendLine("builder.GenerateDalFieldsClass(false);");
             CodeBuilder.AppendLine("builder.GenerateEnumCheckConstraints(false);");
             CodeBuilder.AppendLine();
-            
-            
-            
+
+
+
             CodeBuilder.AppendLine("// table");
 
             var method = _entity.IsView
@@ -431,6 +484,18 @@ namespace EntityFrameworkCore.Generator.Templates
                 : $"builder.{method}(\"{_entity.TableName}\");");
 
             CodeBuilder.AppendLine();
+            foreach (var uc in _entity.UniqueConstraints)
+            {
+                CodeBuilder.Append(uc.Columns.Count > 1
+                    ? $"builder.HasAlternateKey(e => new {{e.{string.Join(", e.", uc.Columns.ToArray())}}})"
+                    : $"builder.HasAlternateKey(e => e.{uc.Columns[0]})");
+                CodeBuilder.IncrementIndent();
+                CodeBuilder.AppendLine();
+                CodeBuilder.Append($".HasName(\"{uc.Name}\")");
+                CodeBuilder.DecrementIndent();
+                CodeBuilder.AppendLine(";");
+            }
+            CodeBuilder.AppendLine();
         }
         private void GenerateIndexMapping()
         {
@@ -441,13 +506,19 @@ namespace EntityFrameworkCore.Generator.Templates
             foreach (var index in _entity.Indexes)
             {
                 var indexName = index.Name.ToSafeName();
-                
-                CodeBuilder.AppendLine(index.Columns.Count > 1
+
+                CodeBuilder.Append(index.Columns.Count > 1
                     ? $"builder.HasIndex(e => new {{e.{string.Join(", e.", index.Columns.ToArray())}}})"
                     : $"builder.HasIndex(e => e.{index.Columns[0]})");
-
                 CodeBuilder.IncrementIndent();
-                CodeBuilder.Append($".HasName(\"{indexName}\")");
+                var testIndexName = $"IX_{_entity.TableName}_{ string.Join("_", index.Columns.ToArray())}";
+                if (!(testIndexName == indexName))
+                {
+
+                    CodeBuilder.AppendLine();
+                    CodeBuilder.Append($".HasName(\"{indexName}\")");
+                }
+
                 if (!string.IsNullOrEmpty(index.Filter))
                 {
                     CodeBuilder.AppendLine();

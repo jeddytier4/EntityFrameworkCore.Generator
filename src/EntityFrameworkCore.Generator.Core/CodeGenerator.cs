@@ -14,8 +14,7 @@ using Microsoft.EntityFrameworkCore.SqlServer.Design.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Design.Internal;
-using Pomelo.EntityFrameworkCore.MySql.Design.Internal;
+
 
 namespace EntityFrameworkCore.Generator
 {
@@ -436,14 +435,14 @@ namespace EntityFrameworkCore.Generator
 
         private void ConfigureMySqlServices(IServiceCollection services)
         {
-            var designTimeServices = new MySqlDesignTimeServices();
-            designTimeServices.ConfigureDesignTimeServices(services);
+            //var designTimeServices = new MySqlDesignTimeServices();
+            //designTimeServices.ConfigureDesignTimeServices(services);
         }
 
         private void ConfigurePostgresServices(IServiceCollection services)
         {
-            var designTimeServices = new NpgsqlDesignTimeServices();
-            designTimeServices.ConfigureDesignTimeServices(services);
+            //var designTimeServices = new NpgsqlDesignTimeServices();
+            //designTimeServices.ConfigureDesignTimeServices(services);
         }
 
         private void ConfigureSqlServerServices(IServiceCollection services)
